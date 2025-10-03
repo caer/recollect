@@ -1,0 +1,6 @@
+[package]
+name = "ld-jam58"
+version = "0.1.0"
+edition = "024"
+
+[dependencies]
