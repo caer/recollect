@@ -1,8 +1,12 @@
 use image::imageops::FilterType;
 
-use crate::{engine::tile::as_macroquad_color, game::audio::SoundTrack};
+use crate::{
+    engine::tile::as_macroquad_color,
+    game::{audio::SoundTrack, entity::Player},
+};
 
 pub mod audio;
+pub mod entity;
 pub mod map;
 
 /// Main game loop entrypoint.
@@ -74,23 +78,32 @@ pub async fn game_loop() {
     }
 
     // Load the first map.
+    let map_wall_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_WALL);
+    let map_floor_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR);
     let mut map =
         crate::engine::tile::TileMap::new(map::WIDTH, map::HEIGHT, map::BACKGROUND, map::DEFAULT);
     map.load_from_bitmap(
         &tileamps[0],
         map::FOREGROUND_LAYER,
         map::LayeredColorMapper {
-            wall_texture: crate::engine::tile::TileTexture::from_bytes(map::TILE_WALL),
-            floor_texture: crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR),
+            wall_texture: map_wall_texture.clone(),
+            floor_texture: map_floor_texture.clone(),
             floor_opacity: 0.75,
         },
     )
     .unwrap();
 
+    // Configure default map settings.
+    map.draw_debug_info = true;
+    map.viewport_scale = 1.0;
+
+    // Configure player sprites and state.
+    let mut player = Player::new();
+
     loop {
         let frame_time = macroquad::prelude::get_frame_time();
 
-        // Update sample tracks.
+        // Update audio tracks.
         track_1.update(frame_time);
         track_2_lo.update(frame_time);
         track_2_hi.update(frame_time);
@@ -99,25 +112,43 @@ pub async fn game_loop() {
         track_4_lo.update(frame_time);
         track_5_hi.update(frame_time);
 
-        // Map ASD keys to track muting.
-        if macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::W) {
-            track_4_lo.toggle_mute();
-            track_5_hi.toggle_mute();
-        }
-        if macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::A) {
-            track_1.toggle_mute();
-        }
-        if macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::S) {
-            track_2_lo.toggle_mute();
-            track_2_hi.toggle_mute();
-        }
-        if macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::D) {
-            track_3_lo.toggle_mute();
-            track_3_hi.toggle_mute();
-        }
+        // Update player position.
+        player.translate(frame_time, &mut map, &map_wall_texture);
 
         // Render the map.
         map.draw_tiles();
+        map.draw_sprite(
+            &player.sprite,
+            player.position.x,
+            player.position.y,
+            0.5,
+            map::FOREGROUND_LAYER,
+            player.sprite_flipped,
+        );
+
+        // Draw controls
+        let screen_height = macroquad::prelude::screen_height();
+        macroquad::prelude::draw_text(
+            "[mouse | touch]",
+            10.,
+            screen_height - 60.,
+            20.,
+            macroquad::prelude::GRAY,
+        );
+        macroquad::prelude::draw_text(
+            "[w a s d]: move",
+            10.,
+            screen_height - 40.,
+            20.,
+            macroquad::prelude::GRAY,
+        );
+        macroquad::prelude::draw_text(
+            "[e]: debug info",
+            10.,
+            screen_height - 20.,
+            20.,
+            macroquad::prelude::GRAY,
+        );
 
         // Await next frame.
         macroquad::prelude::next_frame().await

@@ -52,7 +52,7 @@ impl SoundTrack {
             interval_secs,
             interval_accumulator: 0.0,
             interval_step: 0,
-            muted: true,
+            muted: false,
         }
     }
 
