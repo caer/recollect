@@ -4,7 +4,6 @@ use std::collections::BTreeMap;
 use glam::{Mat2, Vec2};
 use macroquad::{
     color::{GRAY, WHITE},
-    math::Rect,
     texture::{DrawTextureParams, FilterMode, Texture2D},
 };
 use miniquad::MipmapFilterMode;
@@ -298,7 +297,7 @@ impl TileMap {
         let tile_size = self.calculate_tile_size();
         let draw_params = DrawTextureParams {
             dest_size: Some(tile_size),
-            source: Some(Rect::new(0.0, 0.0, 32.0, 32.0)),
+            source: None,
             flip_x,
             ..Default::default()
         };
@@ -338,7 +337,7 @@ impl TileMap {
     }
 
     /// Calculates the current active view size.
-    fn calculate_view_size(&self) -> Vec2 {
+    pub fn calculate_view_size(&self) -> Vec2 {
         Vec2::new(
             macroquad::prelude::screen_width(),
             macroquad::prelude::screen_height(),
@@ -347,7 +346,7 @@ impl TileMap {
 
     /// Calculates the actual tile size in view
     /// coordinates for a given view of this grid.
-    fn calculate_tile_size(&self) -> Vec2 {
+    pub fn calculate_tile_size(&self) -> Vec2 {
         let view_size = self.calculate_view_size();
 
         let mut tile_size = Vec2::new(

@@ -6,8 +6,8 @@ use crate::{
 };
 
 // The player sprites.
-pub const SPRITE_PLAYER: &[u8] = include_bytes!("../../assets/sprite-placeholder.png");
-pub const SPRITE_PLAYER_BACK: &[u8] = include_bytes!("../../assets/sprite-placeholder.png");
+pub const SPRITE_PLAYER: &[u8] = include_bytes!("../../assets/sprite.png");
+pub const SPRITE_PLAYER_BACK: &[u8] = include_bytes!("../../assets/sprite.png");
 
 /// Player state.
 pub struct Player {

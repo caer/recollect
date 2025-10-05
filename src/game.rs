@@ -82,20 +82,10 @@ pub async fn game_loop() {
     let map_floor_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR);
     let mut map =
         crate::engine::tile::TileMap::new(map::WIDTH, map::HEIGHT, map::BACKGROUND, map::DEFAULT);
-    map.load_from_bitmap(
-        &tileamps[0],
-        map::FOREGROUND_LAYER,
-        map::LayeredColorMapper {
-            wall_texture: map_wall_texture.clone(),
-            floor_texture: map_floor_texture.clone(),
-            floor_opacity: 0.75,
-        },
-    )
-    .unwrap();
 
     // Configure default map settings.
     map.draw_debug_info = true;
-    map.viewport_scale = 1.0;
+    map.viewport_scale = 5.0;
 
     // Configure player sprites and state.
     let mut player = Player::new();
@@ -114,6 +104,36 @@ pub async fn game_loop() {
 
         // Update player position.
         player.translate(frame_time, &mut map, &map_wall_texture);
+
+        // Refresh map state.
+        // TODO: This is an expensive hack to clear out state customizations.
+        map.load_from_bitmap(
+            &tileamps[0],
+            map::FOREGROUND_LAYER,
+            map::LayeredColorMapper {
+                wall_texture: map_wall_texture.clone(),
+                floor_texture: map_floor_texture.clone(),
+                floor_opacity: 0.75,
+            },
+        )
+        .unwrap();
+
+        // Center the map viewport on the player. //
+        let player_view_position =
+            map.grid_to_view(player.position.x, player.position.y, map::FOREGROUND_LAYER);
+        // Subtract viewport offset from the view position, since the view position
+        // includes the viewport offset.
+        let player_view_position = player_view_position - map.viewport_offset;
+        map.viewport_offset.x = -player_view_position.x;
+        map.viewport_offset.y = -player_view_position.y;
+        // Shift the viewport offset to be centered on the player.
+        let view_size = map.calculate_view_size();
+        map.viewport_offset.x += view_size.x / 2.0;
+        map.viewport_offset.y += view_size.y / 2.0;
+        // Shift the viewport offset to adjust for the player sprite width.
+        let tile_size = map.calculate_tile_size();
+        map.viewport_offset.x -= tile_size.x / 2.0;
+        map.viewport_offset.y -= tile_size.y / 2.0;
 
         // Render the map.
         map.draw_tiles();

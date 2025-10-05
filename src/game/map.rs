@@ -24,6 +24,9 @@ pub const ACCENT_2: Color = Color::new(151, 171, 212, 255);
 /// Tertiary accent.
 pub const ACCENT_3: Color = Color::new(239, 146, 117, 255);
 
+/// Fog of war color.
+pub const FOG_OF_WAR: Color = Color::new(0, 0, 0, 156);
+
 /// Background.
 pub const BACKGROUND: Color = Color::new(19, 21, 16, 255);
 
