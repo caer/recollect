@@ -31,35 +31,41 @@ async fn game_loop() {
     // Drum samples.
     #[rustfmt::skip]
     let mut track_1 = SoundTrack::new(SAMPLE_BASELINE, [
-        1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0
+        1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0, 
+        1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0
     ], TEMPO_BPM).await;
 
     #[rustfmt::skip]
     let mut track_2_lo = SoundTrack::new(SAMPLE_1_LO, [
-        0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+        0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], TEMPO_BPM).await;
     #[rustfmt::skip]
     let mut track_2_hi = SoundTrack::new(SAMPLE_1_HI, [
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0
     ], TEMPO_BPM).await;
 
     #[rustfmt::skip]
     let mut track_3_lo = SoundTrack::new(SAMPLE_2_LO, [
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0
     ], TEMPO_BPM).await;
     #[rustfmt::skip]
     let mut track_3_hi = SoundTrack::new(SAMPLE_2_HI, [
-        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], TEMPO_BPM).await;
 
     // Pulse samples.
     #[rustfmt::skip]
-    let mut track_4_lo = SoundTrack::new(SAMPLE_PULSE_LO, [
+    let mut track_4_lo = SoundTrack::new(SAMPLE_3_LO, [
         1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], TEMPO_BPM).await;
     #[rustfmt::skip]
-    let mut track_5_hi = SoundTrack::new(SAMPLE_PULSE_HI, [
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
+    let mut track_5_hi = SoundTrack::new(SAMPLE_3_HI, [
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], TEMPO_BPM).await;
 
     loop {
