@@ -1,6 +1,8 @@
 [package]
 name = "ld-jam58"
 version = "0.1.0"
-edition = "024"
+edition = "2024"
 
 [dependencies]
+
+macroquad = { version = "0.4.14", default-features = false, features = ["audio"] }

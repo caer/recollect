@@ -1,6 +1,18 @@
+# `reCollect`
+
 ## What's Here
 
 ## License and Contributions
+
+### Audio Assets
+
+Audio samples are by:
+
+- [Helton Yan](https://heltonyan.itch.io/tranquility)
+- [Clark Audio](https://clarkaudio.com/)
+- [bfxr](https://www.bfxr.net/)
+
+Copyright their respective owners.
 
 ### Art Assets and Game Code
 
