@@ -1,10 +1,9 @@
 use macroquad::audio::{PlaySoundParams, load_sound_from_bytes, play_sound};
 
-use crate::audio::*;
-
-pub mod audio;
 pub mod engine;
 pub mod game;
+
+use game::audio::*;
 
 fn main() {
     macroquad::Window::from_config(

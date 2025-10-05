@@ -1,15 +1,17 @@
 // Foley samples.
 pub const FOLEY_VINYL_TEXTURE: &[u8] =
-    include_bytes!("../assets/Clark Audio - Texture Crackle Vinyl.wav");
+    include_bytes!("../../assets/Clark Audio - Texture Crackle Vinyl.wav");
 
 // Track samples.
-pub const SAMPLE_BASELINE: &[u8] = include_bytes!("../assets/bfxr - decay4.wav");
-pub const SAMPLE_1_LO: &[u8] = include_bytes!("../assets/Helton Yan - Major Distant Piano Lo.wav");
-pub const SAMPLE_1_HI: &[u8] = include_bytes!("../assets/Helton Yan - Major Distant Piano Hi.wav");
-pub const SAMPLE_2_LO: &[u8] = include_bytes!("../assets/Helton Yan - Major Lone Beep Lo.wav");
-pub const SAMPLE_2_HI: &[u8] = include_bytes!("../assets/Helton Yan - Major Lone Beep Hi.wav");
-pub const SAMPLE_3_LO: &[u8] = include_bytes!("../assets/Helton Yan - Pulse Low.wav");
-pub const SAMPLE_3_HI: &[u8] = include_bytes!("../assets/Helton Yan - Pulse High.wav");
+pub const SAMPLE_BASELINE: &[u8] = include_bytes!("../../assets/bfxr - decay4.wav");
+pub const SAMPLE_1_LO: &[u8] =
+    include_bytes!("../../assets/Helton Yan - Major Distant Piano Lo.wav");
+pub const SAMPLE_1_HI: &[u8] =
+    include_bytes!("../../assets/Helton Yan - Major Distant Piano Hi.wav");
+pub const SAMPLE_2_LO: &[u8] = include_bytes!("../../assets/Helton Yan - Major Lone Beep Lo.wav");
+pub const SAMPLE_2_HI: &[u8] = include_bytes!("../../assets/Helton Yan - Major Lone Beep Hi.wav");
+pub const SAMPLE_3_LO: &[u8] = include_bytes!("../../assets/Helton Yan - Pulse Low.wav");
+pub const SAMPLE_3_HI: &[u8] = include_bytes!("../../assets/Helton Yan - Pulse High.wav");
 
 /// The tempo of the game tracks, in beats per minute.
 ///
