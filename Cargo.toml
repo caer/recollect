@@ -4,5 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-
+# Vector math for tiles, positions, etc.
+glam = { version = "0.27.0", default-features = false, features = ["libm"] }
+# Image loading for tiles and sprites.
+image = { version = "0.25.5", default-features = false, features = ["png", "bmp"] }
+# Game engine and windowing.
 macroquad = { version = "0.4.14", default-features = false, features = ["audio"] }
+miniquad = { version = "0.4.8" }
+# Color palette manipulation.
+palette = { version = "0.7.6", default-features = false, features = ["libm"] }
