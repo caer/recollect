@@ -1,7 +1,7 @@
 use image::imageops::FilterType;
 
 use crate::{
-    engine::tile::as_macroquad_color,
+    engine::tile::{Tile, as_macroquad_color},
     game::{audio::SoundTrack, entity::Player},
 };
 
@@ -105,19 +105,6 @@ pub async fn game_loop() {
         // Update player position.
         player.translate(frame_time, &mut map, &map_wall_texture);
 
-        // Refresh map state.
-        // TODO: This is an expensive hack to clear out state customizations.
-        map.load_from_bitmap(
-            &tileamps[0],
-            map::FOREGROUND_LAYER,
-            map::LayeredColorMapper {
-                wall_texture: map_wall_texture.clone(),
-                floor_texture: map_floor_texture.clone(),
-                floor_opacity: 0.75,
-            },
-        )
-        .unwrap();
-
         // Center the map viewport on the player. //
         let player_view_position =
             map.grid_to_view(player.position.x, player.position.y, map::FOREGROUND_LAYER);
@@ -134,6 +121,61 @@ pub async fn game_loop() {
         let tile_size = map.calculate_tile_size();
         map.viewport_offset.x -= tile_size.x / 2.0;
         map.viewport_offset.y -= tile_size.y / 2.0;
+
+        // Refresh map state.
+        // TODO: This is an expensive hack to clear out tile modifications between frames.
+        map.load_from_bitmap(
+            &tileamps[0],
+            map::FOREGROUND_LAYER,
+            map::LayeredColorMapper {
+                wall_texture: map_wall_texture.clone(),
+                floor_texture: map_floor_texture.clone(),
+                floor_opacity: 0.75,
+            },
+        )
+        .unwrap();
+
+        // Apply fog of war to the entire map.
+        for x in 0..map::WIDTH {
+            for y in 0..map::HEIGHT {
+                if let Some(Tile::Filled {
+                    texture,
+                    blend_color,
+                    ..
+                }) = map.get_tile(x, y, map::FOREGROUND_LAYER)
+                {
+                    // Skip wall tiles.
+                    if texture == &map_wall_texture {
+                        continue;
+                    }
+
+                    // TODO: Make vision radius dynamic.
+                    const VISION_RADIUS: f32 = 5.0;
+
+                    // Use more severe fog opacity for tiles further from the player.
+                    let tile_distance = (((x as isize - player.position.x as isize).pow(2)
+                        + (y as isize - player.position.y as isize).pow(2))
+                        as f32)
+                        .sqrt();
+                    let color = if tile_distance > VISION_RADIUS {
+                        let mut new_blend_color = map::DEFAULT;
+                        let opacity = 0.1;
+                        new_blend_color.alpha = (opacity * 255.) as u8;
+                        new_blend_color
+
+                    // Closer tiles retain their original blend color, but with
+                    // reduced opacity based on distance.
+                    } else {
+                        let mut blend_color = blend_color.unwrap_or(map::DEFAULT);
+                        let opacity = 1.1 - (tile_distance / VISION_RADIUS);
+                        blend_color.alpha = (opacity * 255.) as u8;
+                        blend_color
+                    };
+
+                    *blend_color = Some(color);
+                }
+            }
+        }
 
         // Render the map.
         map.draw_tiles();

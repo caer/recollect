@@ -582,4 +582,29 @@ impl TileMap {
             })
             .collect()
     }
+
+    /// TODO: https://web.archive.org/web/20120422045142/https://banu.com/blog/7/drawing-circles/
+    pub fn tiles_in_radius(
+        &self,
+        center_x: isize,
+        center_y: isize,
+        radius: isize,
+    ) -> Vec<(usize, usize)> {
+        let mut tiles = vec![];
+
+        for x in (center_x - radius)..=(center_x + radius) {
+            for y in (center_y - radius)..=(center_y + radius) {
+                if x >= 0 && y >= 0 && x < self.width as isize && y < self.height as isize {
+                    let dx = x - center_x;
+                    let dy = y - center_y;
+
+                    if dx * dx + dy * dy <= radius * radius {
+                        tiles.push((x as usize, y as usize));
+                    }
+                }
+            }
+        }
+
+        tiles
+    }
 }

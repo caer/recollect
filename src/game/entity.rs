@@ -35,7 +35,7 @@ impl Player {
     ///
     /// Does _not_ render the player sprite.
     pub fn translate(&mut self, frame_time: f32, map: &mut TileMap, wall_tile: &TileTexture) {
-        let velocity = 20.0 * frame_time;
+        let velocity = 10.0 * frame_time;
         let last_pos = self.position;
         let mut target_pos = self.position;
 
