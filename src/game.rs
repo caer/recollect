@@ -1,3 +1,5 @@
+use image::imageops::FilterType;
+
 use crate::{engine::tile::as_macroquad_color, game::audio::SoundTrack};
 
 pub mod audio;
@@ -61,6 +63,30 @@ pub async fn game_loop() {
         1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], audio::TEMPO_BPM).await;
 
+    // Load tile maps.
+    let mut tileamps = vec![];
+    for &map_bytes in map::TILEMAPS {
+        let map_image = image::load_from_memory(map_bytes)
+            .unwrap()
+            .rotate270()
+            .resize_exact(map::WIDTH as u32, map::HEIGHT as u32, FilterType::Nearest);
+        tileamps.push(map_image);
+    }
+
+    // Load the first map.
+    let mut map =
+        crate::engine::tile::TileMap::new(map::WIDTH, map::HEIGHT, map::BACKGROUND, map::DEFAULT);
+    map.load_from_bitmap(
+        &tileamps[0],
+        map::FOREGROUND_LAYER,
+        map::LayeredColorMapper {
+            wall_texture: crate::engine::tile::TileTexture::from_bytes(map::TILE_WALL),
+            floor_texture: crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR),
+            floor_opacity: 0.75,
+        },
+    )
+    .unwrap();
+
     loop {
         let frame_time = macroquad::prelude::get_frame_time();
 
@@ -90,9 +116,10 @@ pub async fn game_loop() {
             track_3_hi.toggle_mute();
         }
 
+        // Render the map.
+        map.draw_tiles();
+
         // Await next frame.
-        macroquad::prelude::clear_background(macroquad::prelude::BLACK);
-        macroquad::time::draw_fps();
         macroquad::prelude::next_frame().await
     }
 }

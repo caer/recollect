@@ -2,7 +2,7 @@
 
 use image::Rgba;
 
-use crate::engine::tile::{Color, Tile, TileLoadResult, TileTexture};
+use crate::engine::tile::{Color, ColorMapper, Tile, TileLoadResult, TileTexture};
 
 // Map size in grid units.
 pub const WIDTH: usize = 48;
@@ -16,16 +16,24 @@ pub const BACKGROUND_LAYER: i8 = -1;
 pub const DEFAULT: Color = Color::new(255, 255, 255, 255);
 
 /// Primary accent.
-pub const ACCENT_1: Color = Color::new(228, 140, 53, 255);
+pub const ACCENT_1: Color = Color::new(143, 182, 87, 255);
 
 /// Secondary accent.
-pub const ACCENT_2: Color = Color::new(81, 156, 160, 255);
+pub const ACCENT_2: Color = Color::new(151, 171, 212, 255);
 
 /// Tertiary accent.
-pub const ACCENT_3: Color = Color::new(204, 116, 167, 255);
+pub const ACCENT_3: Color = Color::new(239, 146, 117, 255);
 
 /// Background.
-pub const BACKGROUND: Color = Color::new(38, 38, 34, 255);
+pub const BACKGROUND: Color = Color::new(19, 21, 16, 255);
+
+/// Tile map images.
+pub const TILEMAPS: &[&[u8]] = &[include_bytes!("../../assets/map-1.png")];
+
+// Tile assets
+pub const TILE_BACKGROUND: &[u8] = include_bytes!("../../assets/tile-background.png");
+pub const TILE_FLOOR: &[u8] = include_bytes!("../../assets/tile-floor.png");
+pub const TILE_WALL: &[u8] = include_bytes!("../../assets/tile-wall.png");
 
 /// Game-specific color mapper for loading levels from bitmaps.
 ///
@@ -36,23 +44,13 @@ pub const BACKGROUND: Color = Color::new(38, 38, 34, 255);
 /// - ACCENT_3 = avatar spawn point (pink)
 /// - Any other color = floor
 pub struct LayeredColorMapper {
-    wall_texture: TileTexture,
-    floor_texture: TileTexture,
-    floor_opacity: f32,
+    pub wall_texture: TileTexture,
+    pub floor_texture: TileTexture,
+    pub floor_opacity: f32,
 }
 
-impl LayeredColorMapper {
-    /// Creates a new color mapper for the Layered game.
-    pub fn new(wall_texture: TileTexture, floor_texture: TileTexture, floor_opacity: f32) -> Self {
-        Self {
-            wall_texture,
-            floor_texture,
-            floor_opacity,
-        }
-    }
-
-    /// Maps a bitmap pixel to a tile based on Layered's color semantics.
-    pub fn map_pixel(&mut self, x: u32, y: u32, color: Rgba<u8>) -> TileLoadResult {
+impl ColorMapper for LayeredColorMapper {
+    fn map_pixel(&mut self, x: u32, y: u32, color: Rgba<u8>) -> TileLoadResult {
         let wall_color: [u8; 4] = BACKGROUND.into();
         let objective_color: [u8; 4] = ACCENT_1.into();
         let danger_color: [u8; 4] = ACCENT_2.into();
