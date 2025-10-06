@@ -1,7 +1,7 @@
 //! Tile-based, 2.5D dimetric grid system.
 use std::collections::BTreeMap;
 
-use glam::{Mat2, Vec2};
+use glam::{FloatExt, Mat2, Vec2};
 use macroquad::{
     color::{GRAY, WHITE},
     texture::{DrawTextureParams, FilterMode, Texture2D},
@@ -116,6 +116,16 @@ pub enum Tile {
     Empty,
 }
 
+#[derive(Default)]
+pub struct TileState {
+    pub texture: Option<TileTexture>,
+    pub height_offset: f32,
+    pub target_height_offset: f32,
+    pub original_blend_color: Color,
+    pub blend_color: Color,
+    pub target_blend_color: Color,
+}
+
 /// 2D grid that renders as an axonometric map of tiles.
 pub struct TileMap {
     /// Maximum grid X-value, in units.
@@ -131,7 +141,7 @@ pub struct TileMap {
     ///
     /// Each layer contains a dense vector of
     /// [`Tile`]s of a length equal to [`Self::tiles_per_layer`]
-    layers: BTreeMap<i8, Vec<Tile>>,
+    layers: BTreeMap<i8, Vec<(Tile, TileState)>>,
 
     /// Background color for the map.
     color_bg: Color,
@@ -170,6 +180,39 @@ impl TileMap {
         map
     }
 
+    /// Updates all tile states.
+    pub fn update(&mut self, frame_time: f32) {
+        let interp_speed = 8.0;
+        let interp_factor = frame_time * interp_speed;
+
+        for layer in self.layers.values_mut() {
+            for (.., state) in layer.iter_mut() {
+                // Interpolate height offset.
+                state.height_offset = state
+                    .height_offset
+                    .lerp(state.target_height_offset, interp_factor);
+
+                // Interpolate alpha separately to avoid color shifts.
+                let alpha_f = state.blend_color.alpha as f32 / 255.0;
+                let target_alpha_f = state.target_blend_color.alpha as f32 / 255.0;
+                state.blend_color.alpha =
+                    (alpha_f.lerp(target_alpha_f, interp_factor) * 255.0) as u8;
+
+                // Interpolate RGB channels.
+                let red_f = state.blend_color.red as f32 / 255.0;
+                let target_red_f = state.target_blend_color.red as f32 / 255.0;
+                let green_f = state.blend_color.green as f32 / 255.0;
+                let target_green_f = state.target_blend_color.green as f32 / 255.0;
+                let blue_f = state.blend_color.blue as f32 / 255.0;
+                let target_blue_f = state.target_blend_color.blue as f32 / 255.0;
+                state.blend_color.red = (red_f.lerp(target_red_f, interp_factor) * 255.0) as u8;
+                state.blend_color.green =
+                    (green_f.lerp(target_green_f, interp_factor) * 255.0) as u8;
+                state.blend_color.blue = (blue_f.lerp(target_blue_f, interp_factor) * 255.0) as u8;
+            }
+        }
+    }
+
     /// Draws one frame of the map's tiles.
     pub fn draw_tiles(&mut self) {
         // Reset frame.
@@ -180,29 +223,28 @@ impl TileMap {
 
         // Draw tiles.
         for (layer_height, layer) in &self.layers {
-            for (i, layer) in layer.iter().enumerate().take(self.tiles_per_layer) {
+            for (i, (tile, tile_state)) in layer.iter().enumerate().take(self.tiles_per_layer) {
                 // Convert tile index into logical x/y coordinates.
                 let x = i / self.height;
                 let y = i % self.height;
 
                 // Draw any filled tiles.
-                if let Tile::Filled {
-                    texture,
-                    height_offset,
-                    blend_color,
-                } = layer
-                {
+                if let Tile::Filled { texture, .. } = tile {
                     let view_point = self.grid_to_view(x as f32, y as f32, *layer_height);
 
+                    // Apply tile states.
+                    let height_offset = tile_state.height_offset;
+                    let blend_color = &tile_state.blend_color;
+
                     // Offset by any manual offsets specified for the tile.
-                    let height_offset = -(tile_size.y * height_offset.unwrap_or(0.0));
+                    let height_offset = -(tile_size.y * height_offset);
 
                     // Draw the tile.
                     texture.draw(
                         view_point.x,
                         view_point.y + height_offset,
                         tile_size,
-                        *blend_color.as_ref().unwrap_or(&self.color_default),
+                        *blend_color,
                     );
                 }
             }
@@ -248,7 +290,7 @@ impl TileMap {
             }
 
             match self.layers.get(layer).map(|l| &l[y + self.height * x]) {
-                Some(Tile::Filled { .. }) => {
+                Some((Tile::Filled { .. }, ..)) => {
                     max_layer = Some(*layer);
                     cursor_point = Some(candidate_point);
                 }
@@ -317,23 +359,40 @@ impl TileMap {
             // Initialize layers with all-empty tiles.
             let mut tiles = Vec::with_capacity(self.tiles_per_layer);
             for _ in 0..self.tiles_per_layer {
-                tiles.push(Tile::Empty);
+                tiles.push((Tile::Empty, TileState::default()));
             }
             tiles
         });
 
+        // Clone the tile into a new tile state.
+        let tile_state = match &tile {
+            Tile::Filled {
+                texture,
+                height_offset,
+                blend_color,
+            } => TileState {
+                texture: Some(texture.clone()),
+                height_offset: height_offset.unwrap_or(0.0),
+                target_height_offset: height_offset.unwrap_or(0.0),
+                original_blend_color: *blend_color.as_ref().unwrap_or(&self.color_default),
+                blend_color: *blend_color.as_ref().unwrap_or(&self.color_default),
+                target_blend_color: *blend_color.as_ref().unwrap_or(&self.color_default),
+            },
+            Tile::Empty => TileState::default(),
+        };
+
         // Convert the X/Y coordinate to contiguous vector coordinates.
         let index = y + self.height * x;
-        layer[index] = tile;
+        layer[index] = (tile, tile_state);
     }
 
-    /// Gets the `tile` at logical coordinate `x, y` in `layer`.
-    pub fn get_tile(&mut self, x: usize, y: usize, layer: i8) -> Option<&mut Tile> {
+    /// Gets the state of the `tile` at logical coordinate `x, y` in `layer`.
+    pub fn get_tile_state(&mut self, x: usize, y: usize, layer: i8) -> Option<&mut TileState> {
         let layer = self.layers.get_mut(&layer)?;
 
         // Convert the X/Y coordinate to contiguous vector coordinates.
         let index = y + self.height * x;
-        Some(&mut layer[index])
+        Some(&mut layer[index].1)
     }
 
     /// Calculates the current active view size.
@@ -437,11 +496,8 @@ impl TileMap {
 
     /// TODO:
     pub fn tile_has_color(&mut self, x: usize, y: usize, layer: i8, color: Color) -> bool {
-        if let Some(Tile::Filled {
-            blend_color: Some(blend_color),
-            ..
-        }) = self.get_tile(x, y, layer)
-            && blend_color.without_alpha() == color.without_alpha()
+        if let Some(tile_state) = self.get_tile_state(x, y, layer)
+            && tile_state.blend_color.without_alpha() == color.without_alpha()
         {
             return true;
         }
@@ -458,13 +514,10 @@ impl TileMap {
         old_blend: Color,
         new_blend: Color,
     ) {
-        if let Some(Tile::Filled {
-            blend_color: Some(blend_color),
-            ..
-        }) = self.get_tile(x, y, layer)
-            && blend_color.without_alpha() == old_blend.without_alpha()
+        if let Some(tile_state) = self.get_tile_state(x, y, layer)
+            && tile_state.blend_color.without_alpha() == old_blend.without_alpha()
         {
-            *blend_color = new_blend;
+            tile_state.target_blend_color = new_blend;
             self.flood_fill_tiles(x + 1, y, layer, old_blend, new_blend);
             self.flood_fill_tiles(x - 1, y, layer, old_blend, new_blend);
             self.flood_fill_tiles(x, y + 1, layer, old_blend, new_blend);

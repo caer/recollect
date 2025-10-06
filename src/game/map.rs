@@ -5,8 +5,8 @@ use image::Rgba;
 use crate::engine::tile::{Color, ColorMapper, Tile, TileLoadResult, TileTexture};
 
 // Map size in grid units.
-pub const WIDTH: usize = 48;
-pub const HEIGHT: usize = 48;
+pub const WIDTH: usize = 128;
+pub const HEIGHT: usize = 128;
 
 // Map draw layers.
 pub const FOREGROUND_LAYER: i8 = 0;

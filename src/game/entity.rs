@@ -1,13 +1,16 @@
 use glam::Vec2;
 
 use crate::{
-    engine::tile::{Tile, TileMap, TileTexture},
+    engine::tile::{TileMap, TileTexture},
     game::map,
 };
 
 // The player sprites.
 pub const SPRITE_PLAYER: &[u8] = include_bytes!("../../assets/sprite.png");
 pub const SPRITE_PLAYER_BACK: &[u8] = include_bytes!("../../assets/sprite.png");
+
+/// Player movement velocity in grid units per second.
+const PLAYER_VELOCITY: f32 = 20.0;
 
 /// Player state.
 pub struct Player {
@@ -35,7 +38,7 @@ impl Player {
     ///
     /// Does _not_ render the player sprite.
     pub fn translate(&mut self, frame_time: f32, map: &mut TileMap, wall_tile: &TileTexture) {
-        let velocity = 10.0 * frame_time;
+        let velocity = PLAYER_VELOCITY * frame_time;
         let last_pos = self.position;
         let mut target_pos = self.position;
 
@@ -101,9 +104,8 @@ impl Player {
                 let y = self.position.y as usize;
                 let neighbor_tiles = vec![(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)];
                 for (x, y) in neighbor_tiles {
-                    if let Some(Tile::Filled { texture, .. }) =
-                        map.get_tile(x, y, map::FOREGROUND_LAYER)
-                        && texture == wall_tile
+                    if let Some(tile_state) = map.get_tile_state(x, y, map::FOREGROUND_LAYER)
+                        && tile_state.texture.as_ref() == Some(wall_tile)
                     {
                         self.position = last_pos;
                         break;

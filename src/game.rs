@@ -1,7 +1,7 @@
 use image::imageops::FilterType;
 
 use crate::{
-    engine::tile::{Tile, as_macroquad_color},
+    engine::tile::as_macroquad_color,
     game::{audio::SoundTrack, entity::Player},
 };
 
@@ -77,15 +77,25 @@ pub async fn game_loop() {
         tileamps.push(map_image);
     }
 
-    // Load the first map.
+    // Configure the map.
     let map_wall_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_WALL);
     let map_floor_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR);
     let mut map =
         crate::engine::tile::TileMap::new(map::WIDTH, map::HEIGHT, map::BACKGROUND, map::DEFAULT);
-
-    // Configure default map settings.
     map.draw_debug_info = true;
-    map.viewport_scale = 5.0;
+    map.viewport_scale = 6.0;
+
+    // Load the first map.
+    map.load_from_bitmap(
+        &tileamps[0],
+        map::FOREGROUND_LAYER,
+        map::LayeredColorMapper {
+            wall_texture: map_wall_texture.clone(),
+            floor_texture: map_floor_texture.clone(),
+            floor_opacity: 0.75,
+        },
+    )
+    .unwrap();
 
     // Configure player sprites and state.
     let mut player = Player::new();
@@ -122,30 +132,12 @@ pub async fn game_loop() {
         map.viewport_offset.x -= tile_size.x / 2.0;
         map.viewport_offset.y -= tile_size.y / 2.0;
 
-        // Refresh map state.
-        // TODO: This is an expensive hack to clear out tile modifications between frames.
-        map.load_from_bitmap(
-            &tileamps[0],
-            map::FOREGROUND_LAYER,
-            map::LayeredColorMapper {
-                wall_texture: map_wall_texture.clone(),
-                floor_texture: map_floor_texture.clone(),
-                floor_opacity: 0.75,
-            },
-        )
-        .unwrap();
-
-        // Apply fog of war to the entire map.
+        // Apply fog of war to the entire map. //
         for x in 0..map::WIDTH {
             for y in 0..map::HEIGHT {
-                if let Some(Tile::Filled {
-                    texture,
-                    blend_color,
-                    ..
-                }) = map.get_tile(x, y, map::FOREGROUND_LAYER)
-                {
+                if let Some(tile_state) = map.get_tile_state(x, y, map::FOREGROUND_LAYER) {
                     // Skip wall tiles.
-                    if texture == &map_wall_texture {
+                    if tile_state.texture.as_ref() == Some(&map_wall_texture) {
                         continue;
                     }
 
@@ -166,18 +158,19 @@ pub async fn game_loop() {
                     // Closer tiles retain their original blend color, but with
                     // reduced opacity based on distance.
                     } else {
-                        let mut blend_color = blend_color.unwrap_or(map::DEFAULT);
+                        let mut blend_color = tile_state.original_blend_color;
                         let opacity = 1.1 - (tile_distance / VISION_RADIUS);
                         blend_color.alpha = (opacity * 255.) as u8;
                         blend_color
                     };
 
-                    *blend_color = Some(color);
+                    tile_state.target_blend_color = color;
                 }
             }
         }
 
         // Render the map.
+        map.update(frame_time);
         map.draw_tiles();
         map.draw_sprite(
             &player.sprite,
