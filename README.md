@@ -1,6 +1,11 @@
-# `reCollect`
+![re:collect](docs/recollect-logo.png)
 
-## What's Here
+[@caer](https://github.com/caer)'s Ludum Dare #58 submission.
+
+> In a world without sound, play as Recco, and gather lost
+> records of music from a civilization long since past.
+
+![re:collect gameplay](docs/feature-video.gif)
 
 ## License and Contributions
 
@@ -16,7 +21,7 @@ Copyright their respective owners.
 
 ### Art Assets and Game Code
 
-Art assets and game-specific code are copyright
+Art assets and game code are copyright
 2025 With Caer, LLC, all rights reserved.
 
 ### Everything Else
