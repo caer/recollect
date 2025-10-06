@@ -7,6 +7,12 @@
 
 ![re:collect gameplay](docs/feature-video.gif)
 
+## Made With
+
+- [Rust](https://rust-lang.org)
+- [`aer`](https://github.com/caer/aer) for generating color palettes.
+- A _heavily_ modified version of my [Layered](https://github.com/caer/layered) engine from Ludum Dare #57, which is built on [Macroquad](https://macroquad.rs/)
+
 ## License and Contributions
 
 ### Audio Assets
