@@ -52,7 +52,7 @@ impl SoundTrack {
             interval_secs,
             interval_accumulator: 0.0,
             interval_step: 0,
-            muted: false,
+            muted: true,
         }
     }
 
@@ -86,7 +86,7 @@ impl SoundTrack {
         played_sound
     }
 
-    pub fn toggle_mute(&mut self) {
-        self.muted = !self.muted;
+    pub fn mute(&mut self, muted: bool) {
+        self.muted = muted;
     }
 }

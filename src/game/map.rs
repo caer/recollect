@@ -1,6 +1,7 @@
 //! Level loading utilities for the game.
 
-use image::Rgba;
+use glam::Vec2;
+use image::{DynamicImage, Rgba};
 
 use crate::engine::tile::{Color, ColorMapper, Tile, TileLoadResult, TileTexture};
 
@@ -15,13 +16,13 @@ pub const BACKGROUND_LAYER: i8 = -1;
 /// "Default" color, typically only meaningful for blend masks.
 pub const DEFAULT: Color = Color::new(255, 255, 255, 255);
 
-/// Primary accent.
+/// Primary accent, used for unreached objectives.
 pub const ACCENT_1: Color = Color::new(143, 182, 87, 255);
 
-/// Secondary accent.
+/// Secondary accent, used for reached objectives.
 pub const ACCENT_2: Color = Color::new(151, 171, 212, 255);
 
-/// Tertiary accent.
+/// Tertiary accent, used for player spawn points.
 pub const ACCENT_3: Color = Color::new(239, 146, 117, 255);
 
 /// Fog of war color.
@@ -31,12 +32,87 @@ pub const FOG_OF_WAR: Color = Color::new(0, 0, 0, 156);
 pub const BACKGROUND: Color = Color::new(19, 21, 16, 255);
 
 /// Tile map images.
-pub const TILEMAPS: &[&[u8]] = &[include_bytes!("../../assets/map-1.png")];
+pub const TILEMAPS: &[&[u8]] = &[
+    include_bytes!("../../assets/map-0.png"),
+    include_bytes!("../../assets/map-1.png"),
+    include_bytes!("../../assets/map-2.png"),
+    include_bytes!("../../assets/map-3.png"),
+    include_bytes!("../../assets/map-4.png"),
+];
 
 // Tile assets
 pub const TILE_BACKGROUND: &[u8] = include_bytes!("../../assets/tile-background.png");
 pub const TILE_FLOOR: &[u8] = include_bytes!("../../assets/tile-floor.png");
 pub const TILE_WALL: &[u8] = include_bytes!("../../assets/tile-wall.png");
+
+/// Game map state.
+pub struct GameMap {
+    pub wall_texture: TileTexture,
+    pub floor_texture: TileTexture,
+    pub map: crate::engine::tile::TileMap,
+    pub objectives_remaining: usize,
+}
+
+impl GameMap {
+    /// Create a new, empty game map.
+    pub fn new(wall_texture: TileTexture, floor_texture: TileTexture) -> Self {
+        let mut map = crate::engine::tile::TileMap::new(WIDTH, HEIGHT, BACKGROUND, DEFAULT);
+        map.draw_debug_info = false;
+        map.viewport_scale = 6.0;
+
+        Self {
+            wall_texture,
+            floor_texture,
+            map,
+            objectives_remaining: 0,
+        }
+    }
+    /// Load the game map from the specified tilemap index.
+    ///
+    /// Returns the player spawn position.
+    pub fn load_map(&mut self, bitmap: &DynamicImage) -> Vec2 {
+        // FIXME: This is a bit hacky, but it works for now.
+        // We recreate the tile map from scratch to clear out any old state.
+        self.map = crate::engine::tile::TileMap::new(WIDTH, HEIGHT, BACKGROUND, DEFAULT);
+        self.map.draw_debug_info = false;
+        self.map.viewport_scale = 6.0;
+
+        let spawn_point = self
+            .map
+            .load_from_bitmap(
+                bitmap,
+                FOREGROUND_LAYER,
+                LayeredColorMapper {
+                    wall_texture: self.wall_texture.clone(),
+                    floor_texture: self.floor_texture.clone(),
+                    floor_opacity: 0.75,
+                },
+            )
+            .unwrap();
+
+        // Set all tiles' heights to be very low so that they rise up on game load.
+        // Also count the total number of objective (ACCENT_1) tiles that are present.
+        self.objectives_remaining = 0;
+        for x in 0..WIDTH {
+            for y in 0..HEIGHT {
+                if let Some(tile_state) = self.map.get_tile_state(x, y, FOREGROUND_LAYER) {
+                    tile_state.height_offset = -100.0;
+                    tile_state.target_height_offset = 0.0;
+
+                    if tile_state.original_blend_color == ACCENT_1 {
+                        self.objectives_remaining += 1;
+                    }
+                }
+            }
+        }
+
+        spawn_point.into()
+    }
+
+    pub fn update(&mut self, delta_time: f32) {
+        self.map.update(delta_time);
+    }
+}
 
 /// Game-specific color mapper for loading levels from bitmaps.
 ///

@@ -121,7 +121,13 @@ pub struct TileState {
     pub texture: Option<TileTexture>,
     pub height_offset: f32,
     pub target_height_offset: f32,
+
+    /// TODO: Rename to more accurately reflect this is the "main"
+    /// blend color a tile should revert to.
     pub original_blend_color: Color,
+
+    /// TODO: Rename to more accurately reflect this is the "current"
+    /// blend color a tile is at.
     pub blend_color: Color,
     pub target_blend_color: Color,
 }
@@ -495,9 +501,9 @@ impl TileMap {
     }
 
     /// TODO:
-    pub fn tile_has_color(&mut self, x: usize, y: usize, layer: i8, color: Color) -> bool {
+    pub fn tile_has_original_color(&mut self, x: usize, y: usize, layer: i8, color: Color) -> bool {
         if let Some(tile_state) = self.get_tile_state(x, y, layer)
-            && tile_state.blend_color.without_alpha() == color.without_alpha()
+            && tile_state.original_blend_color.without_alpha() == color.without_alpha()
         {
             return true;
         }
@@ -506,23 +512,34 @@ impl TileMap {
     }
 
     /// TODO: https://en.wikipedia.org/wiki/Flood_fill
-    pub fn flood_fill_tiles(
+    ///
+    /// Returns the number of affected tiles.
+    pub fn flood_fill_tiles_original_color(
         &mut self,
         x: usize,
         y: usize,
         layer: i8,
         old_blend: Color,
         new_blend: Color,
-    ) {
+    ) -> usize {
+        let mut affected_tiles = 0;
+
         if let Some(tile_state) = self.get_tile_state(x, y, layer)
-            && tile_state.blend_color.without_alpha() == old_blend.without_alpha()
+            && tile_state.original_blend_color.without_alpha() == old_blend.without_alpha()
         {
-            tile_state.target_blend_color = new_blend;
-            self.flood_fill_tiles(x + 1, y, layer, old_blend, new_blend);
-            self.flood_fill_tiles(x - 1, y, layer, old_blend, new_blend);
-            self.flood_fill_tiles(x, y + 1, layer, old_blend, new_blend);
-            self.flood_fill_tiles(x, y - 1, layer, old_blend, new_blend);
+            tile_state.original_blend_color = new_blend;
+            affected_tiles += 1;
+            affected_tiles +=
+                self.flood_fill_tiles_original_color(x + 1, y, layer, old_blend, new_blend);
+            affected_tiles +=
+                self.flood_fill_tiles_original_color(x - 1, y, layer, old_blend, new_blend);
+            affected_tiles +=
+                self.flood_fill_tiles_original_color(x, y + 1, layer, old_blend, new_blend);
+            affected_tiles +=
+                self.flood_fill_tiles_original_color(x, y - 1, layer, old_blend, new_blend);
         }
+
+        affected_tiles
     }
 
     /// TODO: https://medium.com/geekculture/bresenhams-line-drawing-algorithm-2e0e953901b3.
