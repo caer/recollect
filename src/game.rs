@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use image::imageops::FilterType;
 
 use crate::{
@@ -7,6 +9,7 @@ use crate::{
 
 pub mod audio;
 pub mod entity;
+pub mod fog;
 pub mod map;
 
 /// Main game loop entrypoint.
@@ -62,7 +65,7 @@ pub async fn game_loop() {
         1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], audio::TEMPO_BPM).await;
     #[rustfmt::skip]
-    let mut track_5_hi = SoundTrack::new(audio::SAMPLE_3_HI, [
+    let mut track_4_hi = SoundTrack::new(audio::SAMPLE_3_HI, [
         0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
         1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
     ], audio::TEMPO_BPM).await;
@@ -99,18 +102,33 @@ pub async fn game_loop() {
 
     // Configure player sprites and state.
     let mut player = Player::new();
+    let mut player_pulses: Vec<fog::Pulse> = vec![];
+
+    // Set all tiles' heights to be very low so that they rise up on game load.
+    for x in 0..map::WIDTH {
+        for y in 0..map::HEIGHT {
+            if let Some(tile_state) = map.get_tile_state(x, y, map::FOREGROUND_LAYER) {
+                tile_state.height_offset = -50.0;
+                tile_state.target_height_offset = 0.0;
+            }
+        }
+    }
 
     loop {
         let frame_time = macroquad::prelude::get_frame_time();
 
+        // Monitor which tracks have played.
+        let mut track_2_played = false;
+        let mut track_4_played = false;
+
         // Update audio tracks.
         track_1.update(frame_time);
-        track_2_lo.update(frame_time);
-        track_2_hi.update(frame_time);
+        track_2_played = track_2_played || track_2_lo.update(frame_time);
+        track_2_played = track_2_played || track_2_hi.update(frame_time);
         track_3_lo.update(frame_time);
         track_3_hi.update(frame_time);
-        track_4_lo.update(frame_time);
-        track_5_hi.update(frame_time);
+        track_4_played = track_4_played || track_4_lo.update(frame_time);
+        track_4_played = track_4_played || track_4_hi.update(frame_time);
 
         // Update player position.
         player.translate(frame_time, &mut map, &map_wall_texture);
@@ -132,6 +150,31 @@ pub async fn game_loop() {
         map.viewport_offset.x -= tile_size.x / 2.0;
         map.viewport_offset.y -= tile_size.y / 2.0;
 
+        // Emit pulses from the player position when tracks play. //
+        if track_2_played {
+            player_pulses.push(fog::Pulse::new(
+                glam::Vec2::new(player.position.x + 0.5, player.position.y + 0.5),
+                fog::MEDIUM_MAX_PULSE_RADIUS as f32,
+            ));
+        }
+        if track_4_played {
+            player_pulses.push(fog::Pulse::new(
+                glam::Vec2::new(player.position.x + 0.5, player.position.y + 0.5),
+                fog::LARGE_MAX_PULSE_RADIUS as f32,
+            ));
+        }
+
+        // Update existing pulses.
+        let time = macroquad::prelude::get_time();
+        player_pulses.retain_mut(|pulse| pulse.update(time));
+
+        // Collect all pulsed tiles.
+        let mut pulsed_tiles = BTreeSet::new();
+        for pulse in &player_pulses {
+            let affected_tiles = pulse.affected_tiles(&map);
+            pulsed_tiles.extend(affected_tiles.into_iter());
+        }
+
         // Apply fog of war to the entire map. //
         for x in 0..map::WIDTH {
             for y in 0..map::HEIGHT {
@@ -141,7 +184,7 @@ pub async fn game_loop() {
                         continue;
                     }
 
-                    // TODO: Make vision radius dynamic.
+                    // TODO: Make default vision radius dynamic.
                     const VISION_RADIUS: f32 = 5.0;
 
                     // Use more severe fog opacity for tiles further from the player.
@@ -149,11 +192,20 @@ pub async fn game_loop() {
                         + (y as isize - player.position.y as isize).pow(2))
                         as f32)
                         .sqrt();
-                    let color = if tile_distance > VISION_RADIUS {
+
+                    // If the tile is currently pulsed, set it to full visibility.
+                    if pulsed_tiles.contains(&(x, y)) {
+                        let blend_color = tile_state.original_blend_color;
+                        tile_state.target_blend_color = blend_color;
+                        tile_state.target_height_offset = 0.1;
+
+                    // Distant tiles are almost fully obscured.
+                    } else if tile_distance > VISION_RADIUS {
                         let mut new_blend_color = map::DEFAULT;
                         let opacity = 0.1;
                         new_blend_color.alpha = (opacity * 255.) as u8;
-                        new_blend_color
+                        tile_state.target_blend_color = new_blend_color;
+                        tile_state.target_height_offset = 0.0;
 
                     // Closer tiles retain their original blend color, but with
                     // reduced opacity based on distance.
@@ -161,10 +213,9 @@ pub async fn game_loop() {
                         let mut blend_color = tile_state.original_blend_color;
                         let opacity = 1.1 - (tile_distance / VISION_RADIUS);
                         blend_color.alpha = (opacity * 255.) as u8;
-                        blend_color
+                        tile_state.target_blend_color = blend_color;
+                        tile_state.target_height_offset = 0.0;
                     };
-
-                    tile_state.target_blend_color = color;
                 }
             }
         }

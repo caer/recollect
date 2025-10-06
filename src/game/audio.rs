@@ -56,7 +56,10 @@ impl SoundTrack {
         }
     }
 
-    pub fn update(&mut self, delta_time: f32) {
+    /// Returns true iff a sound was played this update.
+    pub fn update(&mut self, delta_time: f32) -> bool {
+        let mut played_sound = false;
+
         self.interval_accumulator += delta_time;
         while self.interval_accumulator >= self.interval_secs {
             if !self.muted && self.steps[self.interval_step] != 0 {
@@ -67,6 +70,8 @@ impl SoundTrack {
                         volume: 1.0,
                     },
                 );
+
+                played_sound = true;
             }
 
             self.interval_accumulator -= self.interval_secs;
@@ -77,6 +82,8 @@ impl SoundTrack {
                 self.interval_accumulator = 0.0;
             }
         }
+
+        played_sound
     }
 
     pub fn toggle_mute(&mut self) {
