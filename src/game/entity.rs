@@ -91,25 +91,36 @@ impl Player {
             self.sprite_flipped = self.position.x < target_pos.x;
 
             // Only permit moves which keep the player on the map.
-            if self.position.x < 0.0
-                || self.position.x > (map::WIDTH - 1) as f32
-                || self.position.y < 0.0
-                || self.position.y > (map::HEIGHT - 1) as f32
-            {
-                self.position = last_pos;
+            if self.position.x < 0.0 || self.position.x > (map::WIDTH - 1) as f32 {
+                self.position.x = last_pos.x;
+            }
+            if self.position.y < 0.0 || self.position.y > (map::HEIGHT - 1) as f32 {
+                self.position.y = last_pos.y;
+            }
 
             // Check for wall collisions.
-            } else {
-                let x = self.position.x as usize;
-                let y = self.position.y as usize;
-                let neighbor_tiles = vec![(x, y), (x + 1, y), (x, y + 1), (x + 1, y + 1)];
-                for (x, y) in neighbor_tiles {
-                    if let Some(tile_state) = map.get_tile_state(x, y, map::FOREGROUND_LAYER)
-                        && tile_state.texture.as_ref() == Some(wall_tile)
-                    {
-                        self.position = last_pos;
-                        break;
-                    }
+            let x = self.position.x as usize;
+            let y = self.position.y as usize;
+            if let Some(tile_state) = map.get_tile_state(x, y, map::FOREGROUND_LAYER)
+                && tile_state.texture.as_ref() == Some(wall_tile)
+            {
+                // Try reverting X-axis.
+                if let Some(tile_state) =
+                    map.get_tile_state(last_pos.x as usize, y, map::FOREGROUND_LAYER)
+                    && tile_state.texture.as_ref() != Some(wall_tile)
+                {
+                    self.position.x = last_pos.x;
+
+                // Try reverting Y-axis.
+                } else if let Some(tile_state) =
+                    map.get_tile_state(x, last_pos.y as usize, map::FOREGROUND_LAYER)
+                    && tile_state.texture.as_ref() != Some(wall_tile)
+                {
+                    self.position.y = last_pos.y;
+
+                // Revert both axes.
+                } else {
+                    self.position = last_pos;
                 }
             }
         }
