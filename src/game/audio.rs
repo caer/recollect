@@ -33,7 +33,15 @@ pub struct SoundTrack {
     interval_step: usize,
 
     /// True if the track is currently playing.
-    muted: bool,
+    pub muted: bool,
+
+    /// The sound's volume, where 1.0 is the default.
+    ///
+    /// If the sound's volume is `0`, it will still
+    /// be dispatched to the audio engine--therefore,
+    /// [Self::muted] should be used when the intent
+    /// is to silence a track.
+    pub volume: f32,
 }
 
 impl SoundTrack {
@@ -53,6 +61,7 @@ impl SoundTrack {
             interval_accumulator: 0.0,
             interval_step: 0,
             muted: true,
+            volume: 1.0,
         }
     }
 
@@ -67,7 +76,7 @@ impl SoundTrack {
                     &self.sound,
                     macroquad::audio::PlaySoundParams {
                         looped: false,
-                        volume: 1.0,
+                        volume: self.volume,
                     },
                 );
 
@@ -84,9 +93,5 @@ impl SoundTrack {
         }
 
         played_sound
-    }
-
-    pub fn mute(&mut self, muted: bool) {
-        self.muted = muted;
     }
 }

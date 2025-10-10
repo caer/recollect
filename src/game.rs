@@ -153,18 +153,18 @@ pub async fn game_loop() {
 
             // Play a new track.
             match next_track {
-                0 => track_1.mute(false),
+                0 => track_1.muted = false,
                 1 => {
-                    track_2_lo.mute(false);
-                    track_2_hi.mute(false);
+                    track_2_lo.muted = false;
+                    track_2_hi.muted = false;
                 }
                 2 => {
-                    track_3_lo.mute(false);
-                    track_3_hi.mute(false);
+                    track_3_lo.muted = false;
+                    track_3_hi.muted = false;
                 }
                 3 => {
-                    track_4_lo.mute(false);
-                    track_4_hi.mute(false);
+                    track_4_lo.muted = false;
+                    track_4_hi.muted = false;
                 }
                 _ => {}
             }
@@ -192,7 +192,7 @@ pub async fn game_loop() {
         // Collect all pulsed tiles.
         let mut pulsed_tiles = BTreeSet::new();
         for pulse in &player_pulses {
-            let affected_tiles = pulse.affected_tiles(&map.map);
+            let affected_tiles = pulse.affected_tiles(&mut map.map, &map_wall_texture);
             pulsed_tiles.extend(affected_tiles.into_iter());
         }
 
@@ -206,7 +206,7 @@ pub async fn game_loop() {
                     }
 
                     // TODO: Make default vision radius dynamic.
-                    const VISION_RADIUS: f32 = 5.0;
+                    const VISION_RADIUS: f32 = 6.0;
 
                     // Use more severe fog opacity for tiles further from the player.
                     let tile_distance = (((x as isize - player.position.x as isize).pow(2)
@@ -256,13 +256,13 @@ pub async fn game_loop() {
         // Load the next map if all objectives are cleared.
         if map.objectives_remaining == 0 {
             // Stop all tracks.
-            track_1.mute(true);
-            track_2_lo.mute(true);
-            track_2_hi.mute(true);
-            track_3_lo.mute(true);
-            track_3_hi.mute(true);
-            track_4_lo.mute(true);
-            track_4_hi.mute(true);
+            track_1.muted = true;
+            track_2_lo.muted = true;
+            track_2_hi.muted = true;
+            track_3_lo.muted = true;
+            track_3_hi.muted = true;
+            track_4_lo.muted = true;
+            track_4_hi.muted = true;
             next_track = 0;
 
             // Clear all pulses.

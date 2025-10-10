@@ -1,6 +1,6 @@
 use glam::Vec2;
 
-use crate::engine::tile::TileMap;
+use crate::engine::tile::{TileMap, TileTexture};
 
 pub const TINY_MAX_PULSE_RADIUS: isize = (super::map::HEIGHT as f32 * 0.05) as isize;
 pub const SMALL_MAX_PULSE_RADIUS: isize = (super::map::HEIGHT as f32 * 0.1) as isize;
@@ -39,22 +39,39 @@ impl Pulse {
     }
 
     /// Returns the set of tiles affected by this pulse at its current radius.
-    pub fn affected_tiles(&self, map: &TileMap) -> Vec<(usize, usize)> {
-        let mut pulse_tiles = map.tiles_on_radius(
-            self.origin.x as isize,
-            self.origin.y as isize,
-            3 + self.radius as isize,
-        );
-        pulse_tiles.extend(map.tiles_on_radius(
-            self.origin.x as isize,
-            self.origin.y as isize,
-            2 + self.radius as isize,
-        ));
-        pulse_tiles.extend(map.tiles_on_radius(
-            self.origin.x as isize,
-            self.origin.y as isize,
-            1 + self.radius as isize,
-        ));
+    pub fn affected_tiles(
+        &self,
+        map: &mut TileMap,
+        wall_texture: &TileTexture,
+    ) -> Vec<(usize, usize)> {
+        let mut pulse_tiles = Vec::new();
+
+        for i in 1..5 {
+            let mut radius_tiles = map.tiles_on_radius(
+                self.origin.x as isize,
+                self.origin.y as isize,
+                self.radius as isize - i,
+            );
+
+            radius_tiles.retain(|(x, y)| {
+                // TODO: Cheesy ray-tracing for occlusion on the wavefront.
+                let mut occluded = false;
+                let line_points =
+                    map.tiles_on_line_between(self.origin.x, self.origin.y, *x as f32, *y as f32);
+                for (x, y) in line_points.iter().take(line_points.len() - 1).skip(1) {
+                    if let Some(tile) = map.get_tile_state(*x, *y, super::map::FOREGROUND_LAYER)
+                        && tile.texture.as_ref() == Some(wall_texture)
+                    {
+                        occluded = true;
+                        break;
+                    }
+                }
+
+                !occluded
+            });
+
+            pulse_tiles.extend(radius_tiles);
+        }
 
         pulse_tiles
     }
