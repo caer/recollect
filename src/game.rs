@@ -4,7 +4,10 @@ use image::imageops::FilterType;
 
 use crate::{
     engine::tile::as_macroquad_color,
-    game::{audio::SoundTrack, entity::Player},
+    game::{
+        audio::{Piece, Track},
+        entity::Player,
+    },
 };
 
 pub mod audio;
@@ -30,45 +33,51 @@ pub async fn game_loop() {
         },
     );
 
-    // Drum samples.
+    // Configure audio tracks.
     #[rustfmt::skip]
-    let mut track_1 = SoundTrack::new(audio::SAMPLE_BASELINE, [
+    let track_1 = Track::new(audio::SAMPLE_BASELINE, [
         1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0, 
-        1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0
-    ], audio::TEMPO_BPM).await;
-
+        1,0,0,0, 1,0,0,1, 1,0,0,0, 1,0,0,0,
+    ]).await;
     #[rustfmt::skip]
-    let mut track_2_lo = SoundTrack::new(audio::SAMPLE_1_LO, [
+    let track_2_lo = Track::new(audio::SAMPLE_1_LO, [
         0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
-    #[rustfmt::skip]
-    let mut track_2_hi = SoundTrack::new(audio::SAMPLE_1_HI, [
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
-        0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
-
-    #[rustfmt::skip]
-    let mut track_3_lo = SoundTrack::new(audio::SAMPLE_2_LO, [
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
-        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
-    #[rustfmt::skip]
-    let mut track_3_hi = SoundTrack::new(audio::SAMPLE_2_HI, [
-        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 
-        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
-
-    // Pulse samples.
-    #[rustfmt::skip]
-    let mut track_4_lo = SoundTrack::new(audio::SAMPLE_3_LO, [
-        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
-    #[rustfmt::skip]
-    let mut track_4_hi = SoundTrack::new(audio::SAMPLE_3_HI, [
         0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0
-    ], audio::TEMPO_BPM).await;
+    ]).await;
+    #[rustfmt::skip]
+    let track_2_hi = Track::new(audio::SAMPLE_1_HI, [
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0,
+    ]).await;
+    #[rustfmt::skip]
+    let track_3_lo = Track::new(audio::SAMPLE_2_LO, [
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0,
+    ]).await;
+    #[rustfmt::skip]
+    let track_3_hi = Track::new(audio::SAMPLE_2_HI, [
+        0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+    ]).await;
+    #[rustfmt::skip]
+    let track_4_lo = Track::new(audio::SAMPLE_3_LO, [
+        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+    ]).await;
+    #[rustfmt::skip]
+    let track_4_hi = Track::new(audio::SAMPLE_3_HI, [
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+    ]).await;
+
+    // Compose a piece.
+    let mut audio_piece = Piece::new(track_1, audio::TEMPO_BPM)
+        .with(track_2_lo)
+        .with(track_2_hi)
+        .with(track_3_lo)
+        .with(track_3_hi)
+        .with(track_4_lo)
+        .with(track_4_hi);
 
     // Which track should unmute next?
     let mut next_track = 0;
@@ -99,19 +108,6 @@ pub async fn game_loop() {
 
     loop {
         let frame_time = macroquad::prelude::get_frame_time();
-
-        // Monitor which tracks have played.
-        let mut track_2_played = false;
-        let mut track_4_played = false;
-
-        // Update audio tracks.
-        track_1.update(frame_time);
-        track_2_played = track_2_played || track_2_lo.update(frame_time);
-        track_2_played = track_2_played || track_2_hi.update(frame_time);
-        track_3_lo.update(frame_time);
-        track_3_hi.update(frame_time);
-        track_4_played = track_4_played || track_4_lo.update(frame_time);
-        track_4_played = track_4_played || track_4_hi.update(frame_time);
 
         // Update player position.
         player.translate(frame_time, &mut map.map, &map_wall_texture);
@@ -153,32 +149,35 @@ pub async fn game_loop() {
 
             // Play a new track.
             match next_track {
-                0 => track_1.muted = false,
+                0 => audio_piece.set_track_volume(0, 1.0),
                 1 => {
-                    track_2_lo.muted = false;
-                    track_2_hi.muted = false;
+                    audio_piece.set_track_volume(1, 1.0);
+                    audio_piece.set_track_volume(2, 1.0);
                 }
                 2 => {
-                    track_3_lo.muted = false;
-                    track_3_hi.muted = false;
+                    audio_piece.set_track_volume(3, 1.0);
+                    audio_piece.set_track_volume(4, 1.0);
                 }
                 3 => {
-                    track_4_lo.muted = false;
-                    track_4_hi.muted = false;
+                    audio_piece.set_track_volume(5, 1.0);
+                    audio_piece.set_track_volume(6, 1.0);
                 }
                 _ => {}
             }
             next_track += 1;
         }
 
+        // Update audio tracks.
+        let played_tracks = audio_piece.update(frame_time);
+
         // Emit pulses from the player position when tracks play. //
-        if track_2_played {
+        if played_tracks[1] || played_tracks[2] {
             player_pulses.push(fog::Pulse::new(
                 glam::Vec2::new(player.position.x + 0.5, player.position.y + 0.5),
                 fog::MEDIUM_MAX_PULSE_RADIUS as f32,
             ));
         }
-        if track_4_played {
+        if played_tracks[5] || played_tracks[6] {
             player_pulses.push(fog::Pulse::new(
                 glam::Vec2::new(player.position.x + 0.5, player.position.y + 0.5),
                 fog::LARGE_MAX_PULSE_RADIUS as f32,
@@ -256,13 +255,9 @@ pub async fn game_loop() {
         // Load the next map if all objectives are cleared.
         if map.objectives_remaining == 0 {
             // Stop all tracks.
-            track_1.muted = true;
-            track_2_lo.muted = true;
-            track_2_hi.muted = true;
-            track_3_lo.muted = true;
-            track_3_hi.muted = true;
-            track_4_lo.muted = true;
-            track_4_hi.muted = true;
+            for i in 0..audio_piece.track_count() {
+                audio_piece.set_track_volume(i, 0.0);
+            }
             next_track = 0;
 
             // Clear all pulses.
