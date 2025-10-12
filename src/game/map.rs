@@ -67,6 +67,7 @@ impl GameMap {
             objectives_remaining: 0,
         }
     }
+
     /// Load the game map from the specified tilemap index.
     ///
     /// Returns the player spawn position.

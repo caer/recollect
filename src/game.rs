@@ -7,6 +7,7 @@ use crate::{
     game::{
         audio::{Piece, Track},
         entity::Player,
+        transition::{TransitionOverlay, TransitionState},
     },
 };
 
@@ -14,6 +15,10 @@ pub mod audio;
 pub mod entity;
 pub mod fog;
 pub mod map;
+pub mod transition;
+
+pub const IMAGE_SPLASH: &[u8] = include_bytes!("../assets/splash.png");
+pub const IMAGE_LOADING: &[u8] = include_bytes!("../assets/loading.png");
 
 /// Main game loop entrypoint.
 pub async fn game_loop() {
@@ -100,6 +105,8 @@ pub async fn game_loop() {
     let map_wall_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_WALL);
     let map_floor_texture = crate::engine::tile::TileTexture::from_bytes(map::TILE_FLOOR);
     let mut map = map::GameMap::new(map_wall_texture.clone(), map_floor_texture.clone());
+    let mut map_transition = TransitionOverlay::new(0.0, 2.0, 0.75).with_image(IMAGE_SPLASH);
+    let mut map_transition_state = map_transition.update(0.0);
 
     // Load the first map.
     let spawn_point = map.load_map(&tilemaps[0]);
@@ -263,10 +270,21 @@ pub async fn game_loop() {
             // Clear all pulses.
             player_pulses.clear();
 
-            // Load the next map.
-            let spawn_point = map.load_map(&tilemaps[next_map_index]);
-            player.position = spawn_point;
-            next_map_index = (next_map_index + 1) % tilemaps.len();
+            match map_transition_state {
+                // Start a new transition if there isn't one already in progress.
+                TransitionState::Complete => {
+                    map_transition =
+                        TransitionOverlay::new(0.75, 1.0, 0.75).with_image(IMAGE_LOADING);
+                }
+
+                // Load the next map once the transition is holding.
+                TransitionState::Hold => {
+                    let spawn_point = map.load_map(&tilemaps[next_map_index]);
+                    player.position = spawn_point;
+                    next_map_index = (next_map_index + 1) % tilemaps.len();
+                }
+                _ => {}
+            }
         }
 
         // Draw controls
@@ -292,6 +310,9 @@ pub async fn game_loop() {
         //     20.,
         //     macroquad::prelude::GRAY,
         // );
+
+        // Apply transition overlay if active.
+        map_transition_state = map_transition.update(frame_time);
 
         // Await next frame.
         macroquad::prelude::next_frame().await
