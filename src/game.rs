@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use image::imageops::FilterType;
 
 use crate::{
@@ -193,14 +191,7 @@ pub async fn game_loop() {
 
         // Update existing pulses.
         let time = macroquad::prelude::get_time();
-        player_pulses.retain_mut(|pulse| pulse.update(time));
-
-        // Collect all pulsed tiles.
-        let mut pulsed_tiles = BTreeSet::new();
-        for pulse in &player_pulses {
-            let affected_tiles = pulse.affected_tiles(&mut map.map, &map_wall_texture);
-            pulsed_tiles.extend(affected_tiles.into_iter());
-        }
+        player_pulses.retain_mut(|pulse| pulse.update(time, &mut map.map, &map_wall_texture));
 
         // Apply fog of war to the entire map. //
         for x in 0..map::WIDTH {
@@ -221,7 +212,7 @@ pub async fn game_loop() {
                         .sqrt();
 
                     // If the tile is currently pulsed, set it to full visibility.
-                    if pulsed_tiles.contains(&(x, y)) {
+                    if player_pulses.iter().any(|p| p.affects_tile(x, y)) {
                         let blend_color = tile_state.original_blend_color;
                         tile_state.target_blend_color = blend_color;
                         tile_state.target_height_offset = 0.1;

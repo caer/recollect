@@ -1,5 +1,5 @@
 //! Tile-based, 2.5D dimetric grid system.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use glam::{FloatExt, Mat2, Vec2};
 use macroquad::{
@@ -654,27 +654,35 @@ impl TileMap {
     }
 
     /// TODO: https://web.archive.org/web/20120422045142/https://banu.com/blog/7/drawing-circles/
-    pub fn tiles_in_radius(
+    pub fn tiles_on_radius_with_thickness(
         &self,
+        output: &mut BTreeSet<(usize, usize)>,
         center_x: isize,
         center_y: isize,
         radius: isize,
-    ) -> Vec<(usize, usize)> {
-        let mut tiles = vec![];
+        thickness: isize,
+    ) {
+        // https://funloop.org/post/2021-03-15-bresenham-circle-drawing-algorithm.html#final-tweaks
+        let adjusted_radius: f32 = radius as f32 + 0.5;
+        let adjusted_inner_radius: f32 = (radius - thickness) as f32 + 0.5;
+        let r2 = adjusted_radius * adjusted_radius;
+        let ir2 = adjusted_inner_radius * adjusted_inner_radius;
 
         for x in (center_x - radius)..=(center_x + radius) {
             for y in (center_y - radius)..=(center_y + radius) {
                 if x >= 0 && y >= 0 && x < self.width as isize && y < self.height as isize {
+                    // Calculate outer squared distance.
                     let dx = x - center_x;
                     let dy = y - center_y;
+                    let dx_squared = dx * dx;
+                    let dy_squared = dy * dy;
+                    let d_squared = dx_squared + dy_squared;
 
-                    if dx * dx + dy * dy <= radius * radius {
-                        tiles.push((x as usize, y as usize));
+                    if d_squared <= r2 as isize && d_squared > ir2 as isize {
+                        output.insert((x as usize, y as usize));
                     }
                 }
             }
         }
-
-        tiles
     }
 }
