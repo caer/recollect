@@ -101,6 +101,11 @@ impl Piece {
     /// to the track at the same index in [Self::tracks].
     pub fn update(&mut self, delta_time: f32) -> &[bool] {
         self.interval_accumulator += delta_time;
+
+        // Clear previous track states.
+        self.track_states.fill(false);
+
+        // Play any tracks that have a sound at the current step.
         while self.interval_accumulator >= self.interval_secs {
             for (i, track) in self.tracks.iter().enumerate() {
                 if track.volume > 0.0 && track.steps[self.interval_step] != 0 {
@@ -113,8 +118,6 @@ impl Piece {
                     );
 
                     self.track_states[i] = true;
-                } else {
-                    self.track_states[i] = false;
                 }
             }
 
